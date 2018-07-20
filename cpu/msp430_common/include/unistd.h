@@ -15,8 +15,8 @@
  * @brief       unistd.h wrapper for MSP430
  */
 
-#ifndef UNISTD_H
-#define UNISTD_H
+#ifndef MSP430_UNISTD_H
+#define MSP430_UNISTD_H
 
 #include <stddef.h>
 #include <stdint.h>
@@ -115,5 +115,5 @@ ssize_t      write(int, const void *, size_t);
 }
 #endif
 
-#endif /* UNISTD_H */
+#endif /* MSP430_UNISTD_H */
 /** @} */

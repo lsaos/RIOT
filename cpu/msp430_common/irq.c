@@ -24,7 +24,7 @@
 
 volatile int __irq_is_in = 0;
 
-char __isr_stack[ISR_STACKSIZE];
+char __attribute__((section (".isr_stack"))) __isr_stack[ISR_STACKSIZE];
 
 unsigned int irq_disable(void)
 {

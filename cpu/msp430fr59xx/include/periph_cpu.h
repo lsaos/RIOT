@@ -48,6 +48,17 @@ typedef uint16_t gpio_t;
 #define GPIO_PIN(x, y)      ((gpio_t)(((x & 0xff) << 8) | (1 << (y & 0x07))))
 
 /**
+ * @brief   Define a custom type for GPIO interrupt context
+ * @{
+ */
+#define HAVE_GPIO_ISR_CTX_T
+typedef struct {
+    void (*cb)(void *arg);   /**< interrupt callback */
+    void *arg;               /**< optional argument */
+    bool both_edges;         /**< detect both rising and falling edges */
+} gpio_isr_ctx_t;
+
+/**
  * @brief   Available ports on MSP430 platforms
  */
 enum {

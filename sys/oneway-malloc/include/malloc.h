@@ -33,6 +33,7 @@
 #define MALLOC_H
 
 #include <stdlib.h>
+#include <stddef.h>
 
 #ifdef __cplusplus
 extern "C" {

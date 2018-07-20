@@ -83,8 +83,12 @@ static int init_base(uart_t uart, uint32_t baudrate)
     msp_usci_t* dev = UART_BASE;
 
     // Configure pins USCI_A0 UART operation
+    gpio_init(UART_RX_PIN, GPIO_IN);
+    gpio_init(UART_TX_PIN, GPIO_OUT);
+
     gpio_periph_mode(UART_RX_PIN, false, true, false);
     gpio_periph_mode(UART_TX_PIN, false, true, false);
+
 
     dev->CTLW0 = USCI_CTL0_SWRST;
     

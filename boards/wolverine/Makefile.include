@@ -2,6 +2,9 @@
 export CPU = msp430fr59xx
 export CPU_MODEL = msp430fr5969
 
+# Use msp430-elf-gcc by default as mspgcc doesn't work with msp430fr59xx boards.
+export TARGET_ARCH ?= msp430-elf
+
 # set default port depending on operating system
 PORT_LINUX ?= /dev/ttyACM1
 PORT_DARWIN ?= $(firstword $(sort $(wildcard /dev/tty.SLAB_USBtoUART*)))

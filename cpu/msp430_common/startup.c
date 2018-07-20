@@ -37,3 +37,29 @@ __attribute__((constructor)) static void startup(void)
 
     kernel_init();
 }
+
+#include <msp430.h>
+#include <string.h>
+
+void riot_boot(void)
+{
+    /* disable watchdog timer */
+    WDTCTL = WDTPW + WDTHOLD;
+    
+    extern char LINKER_data_start;
+    extern char LINKER_data_size;
+    extern char LINKER_data_start_rom;
+
+    extern char LINKER_bss_start;
+    extern char LINKER_bss_size;
+
+    memset((void*)((unsigned int)&LINKER_bss_start),
+        0,
+        ((unsigned int)&LINKER_bss_size));
+
+    memmove((void*)((unsigned int)&LINKER_data_start),
+        (void*)((unsigned int)&LINKER_data_start_rom),
+        ((unsigned int)&LINKER_data_size));
+    
+    startup();
+}

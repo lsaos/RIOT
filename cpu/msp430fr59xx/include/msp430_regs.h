@@ -42,7 +42,7 @@ extern "C" {
 /**
  * @brief   Digital I/O Port
  */
-typedef struct msp_port_t {
+typedef struct msp_port {
     REG8 IN[2];      /**< input (00-01) */
     REG8 OD[2];      /**< output (02-03) */
     REG8 DIR[2];     /**< direction (04-05) */
@@ -51,7 +51,7 @@ typedef struct msp_port_t {
     REG8 SEL0[2];    /**< resistor enable (0A-0B) */
     REG8 SEL1[2];    /**< resistor enable (0C-0D) */
     REG16 IV1;       /**< interrupt vector word 1 (0E-0F) */
-    char pad_1[7];   /**< padding (10-16) */
+    char pad_1[6];   /**< padding (10-15) */
     REG8 SELC[2];    /**< complement selection (16-17) */
     REG8 IES[2];     /**< interrupt edge select (18-19) */
     REG8 IE[2];      /**< interrupt enable (1A-1B) */
@@ -62,7 +62,7 @@ typedef struct msp_port_t {
 /**
  * @brief   USCI universal serial control interface registers
  */
-typedef struct msp_usci_t {
+typedef struct msp_usci {
     REG16 CTLW0;      /**< A control word 0 (00-01) */
     REG16 CTLW1;      /**< A control word 1 (02-03) */
     char pad_0[2];    /**< padding (04-05) */
@@ -84,7 +84,7 @@ typedef struct msp_usci_t {
 /**
  * @brief   Timer module registers
  */
-typedef struct msp_timer_t {
+typedef struct msp_timer {
     REG16 CTL;        /**< timer control */
     REG16 CCTL[5];    /**< capture compare channel control */
     char pad_0[4];   /**< padding */

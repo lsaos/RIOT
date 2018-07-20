@@ -1,6 +1,20 @@
 include $(RIOTCPU)/msp430_common/Makefile.include
 
-export USEMODULE += periph periph_common uart_stdio newlib
+export USEMODULE += periph periph_common uart_stdio
 
-export CFLAGS += -I$(RIOTCPU)/$(CPU)/elf-gcc/include
-export LINKFLAGS += -L$(RIOTCPU)/$(CPU)/elf-gcc/link
+ifdef TARGET_ARCH
+    ifeq ($(TARGET_ARCH),msp430-elf)
+        export USEMODULE += libc fmt
+
+        INCLUDES += -I$(RIOTBASE)/sys/libc/include/gcc
+        INCLUDES += -I$(RIOTBASE)/sys/libc/include
+
+        export CFLAGS += -I$(RIOTCPU)/$(CPU)/elf-gcc/include \
+            -fno-common -ffreestanding -nostdinc
+
+        export LINKFLAGS += -L$(RIOTCPU)/$(CPU)/elf-gcc/ldscripts \
+            -fno-builtin -nostartfiles -nodefaultlibs -nostdlib \
+            -T$(CPU_MODEL).ld
+        
+    endif
+endif

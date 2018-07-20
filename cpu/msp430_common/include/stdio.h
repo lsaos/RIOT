@@ -17,8 +17,8 @@
  * @author      Joakim Nohlgård <joakim.nohlgard@eistec.se
  */
 
-#ifndef STDIO_H
-#define STDIO_H
+#ifndef MSP430_STDIO_H
+#define MSP430_STDIO_H
 
 #include_next <stdio.h>
 
@@ -48,5 +48,5 @@ int getchar(void);
 
 #endif /* MODULE_NEWLIB_SYSCALLS_DEFAULT */
 
-#endif /* STDIO_H */
+#endif /* MSP430_STDIO_H */
 /** @} */

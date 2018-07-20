@@ -17,8 +17,8 @@
  * @author      Martine Lenders <mlenders@inf.fu-berlin.de>
  */
 
-#ifndef TIME_H
-#define TIME_H
+#ifndef MSP430_TIME_H
+#define MSP430_TIME_H
 
 #include <sys/types.h>
 #include "msp430_types.h"
@@ -47,5 +47,5 @@ struct tm {
 }
 #endif
 
-#endif /* TIME_H */
+#endif /* MSP430_TIME_H */
 /** @} */

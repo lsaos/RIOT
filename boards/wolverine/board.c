@@ -30,29 +30,58 @@
 
 static void wolverine_ports_init(void)
 {
-    P2DIR |= BIT0;
-    P2SEL0 |= BIT0; // Output ACLK
-    P2SEL1 |= BIT0;
+    P1DIR = 0;
+    P1OUT = 0;
+    P1REN = 0;
+    P1SEL0 = 0;
+    P1SEL1 = 0;
+    P1SELC = 0;
+    P1IE = 0;
+    P1IFG = 0;
+    P1IES = 0;
 
-    P3DIR |= BIT4;
-    P3SEL1 |= BIT4; // Output SMCLK
+    P2DIR = 0;
+    P2OUT = 0;
+    P2REN = 0;
+    P2SEL0 = 0;
+    P2SEL1 = 0;
+    P2SELC = 0;
+    P2IE = 0;
+    P2IFG = 0;
+    P2IES = 0;
 
+    P3DIR = 0;
+    P3OUT = 0;
+    P3REN = 0;
+    P3SEL0 = 0;
+    P3SEL1 = 0;
+    P3SELC = 0;
+    P3IE = 0;
+    P3IFG = 0;
+    P3IES = 0;
+
+    P4DIR = 0;
+    P4OUT = 0;
+    P4REN = 0;
+    P4SEL0 = 0;
+    P4SEL1 = 0;
+    P4SELC = 0;
+    P4IE = 0;
+    P4IFG = 0;
+    P4IES = 0;
+
+    PJDIR = 0xff;
+    PJOUT = 0;
     PJSEL0 = BIT4 | BIT5; // For XT1
+    PJSEL1 = 0;
+    PJSELC = 0;
 
-    // LEDs init
     gpio_init(LED0_PIN, GPIO_OUT);
     gpio_init(LED1_PIN, GPIO_OUT);
 
-    /*P1SEL0 &= ~BIT0;
-    P1SEL1 &= ~BIT0;
-    P1SELC &= ~BIT0;
-
-    P1DIR &= ~BIT0;
-    P1OUT |= BIT0;
-    P1REN |= BIT0;
-    P1IES |= BIT0;
-    P1IFG &= ~BIT0;
-    P1IE |= BIT0;*/
+    /* Disable the GPIO power-on default high-impedance mode to activate
+     * previously configured port settings */
+    PM5CTL0 &= ~LOCKLPM5;
 }
 
 void msp430_init_dco(void)
@@ -81,9 +110,6 @@ void board_init(void)
     /* init CPU core */
     msp430_cpu_init();
 
-    /* disable watchdog timer */
-    WDTCTL     =  WDTPW + WDTHOLD;
-
     /* init MCU pins as adequate for wolverine hardware */
     wolverine_ports_init();
 
@@ -93,10 +119,6 @@ void board_init(void)
     /* initialize STDIO over UART */
     uart_stdio_init();
 
-    /* Disable the GPIO power-on default high-impedance mode to activate
-     * previously configured port settings */
-    PM5CTL0 &= ~LOCKLPM5;
-
     /* enable interrupts */
-    __bis_SR_register(GIE);
+    __enable_interrupt();
 }

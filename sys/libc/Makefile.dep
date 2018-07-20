@@ -1,0 +1,2 @@
+USEMODULE += uart_stdio
+USEMODULE += fmt

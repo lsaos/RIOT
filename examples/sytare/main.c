@@ -97,6 +97,7 @@ int countdown(int argc, char **argv)
         return -1;
     }
 
+    (void)argv;
     unsigned int seconds = atoi(argv[1]);
 
     while(seconds > 0)
@@ -120,7 +121,7 @@ static const shell_command_t commands[] = {
 
 int main(void)
 {
-    (void)puts("Welcome to RIOT!");
+    (void)puts("Sytare test");
 
     char lineBuffer[SHELL_DEFAULT_BUFSIZE];
     shell_run(commands, lineBuffer, SHELL_DEFAULT_BUFSIZE);

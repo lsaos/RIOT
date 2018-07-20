@@ -79,7 +79,7 @@ static inline uint8_t _port_index(gpio_t pin)
 static int _ctx(gpio_t pin)
 {
     const int i = bitarithm_lsb(_pin(pin));
-    return (pin >> 8) * PINS_PER_PORT + i;
+    return ((pin >> 8) - 1) * PINS_PER_PORT + i;
 }
 
 int gpio_init(gpio_t pin, gpio_mode_t mode)
@@ -100,10 +100,6 @@ int gpio_init(gpio_t pin, gpio_mode_t mode)
     else {
         port->DIR[portindex] &= ~(_pin(pin));
     }
-
-    port->SEL0[portindex] &= ~_pin(pin);
-    port->SEL1[portindex] &= ~_pin(pin);
-    port->SELC[portindex] &= ~_pin(pin);
 
     return 0;
 }
@@ -129,14 +125,17 @@ int gpio_init_int(gpio_t pin, gpio_mode_t mode, gpio_flank_t flank,
     }
 
     /* save ISR context */
-    isr_ctx[_ctx(pin)].cb = cb;
-    isr_ctx[_ctx(pin)].arg = arg;
+    gpio_isr_ctx_t* const ctx = &isr_ctx[_ctx(pin)];
+    ctx->cb = cb;
+    ctx->arg = arg;
+    ctx->both_edges = (flank & GPIO_BOTH) != 0;
 
     /* configure flank */
     port->REN[portindex] |= _pin(pin);
+    port->OD[portindex] |= _pin(pin);
 
-    if(flank & GPIO_RISING) {
-        port->IES[portindex] |= _pin(pin); 
+    if(flank == 0) {
+        port->IES[portindex] |= _pin(pin);
     }
     else {
         port->IES[portindex] &= ~_pin(pin);
@@ -235,10 +234,19 @@ void gpio_write(gpio_t pin, int value)
 
 static inline void isr_handler(msp_port_t* port, uint8_t portindex, int ctx)
 {
-    for (unsigned i = 0; i < PINS_PER_PORT; i++) {
-        if ((port->IE[portindex] & (1 << i)) && (port->IFG[portindex] & (1 << i))) {
+    for (unsigned i = 0; i < PINS_PER_PORT; i++)
+    {
+        if ((port->IE[portindex] & (1 << i)) && (port->IFG[portindex] & (1 << i)))
+        {
+            const gpio_isr_ctx_t* const ictx = &isr_ctx[i + ctx];
+
+            ictx->cb(ictx->arg);
+
+            if(ictx->both_edges) {
+                port->IES[portindex] ^= (1 << i);
+            }
+
             port->IFG[portindex] &= ~(1 << i);
-            isr_ctx[i + ctx].cb(isr_ctx[i + ctx].arg);
         }
     }
 }
