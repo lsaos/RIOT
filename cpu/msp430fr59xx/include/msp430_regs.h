@@ -32,12 +32,17 @@ extern "C" {
 /**
  * @brief   Shortcut to specify 8-bit wide registers
  */
-#define REG8                volatile uint8_t
+typedef volatile unsigned char REG8;
 
 /**
  * @brief   Shortcut to specify 16-bit wide registers
  */
-#define REG16               volatile uint16_t
+typedef volatile unsigned int REG16;
+
+/**
+ * @brief   Shortcut to specify 32-bit wide registers
+ */
+typedef volatile unsigned long int REG32;
 
 /**
  * @brief   Digital I/O Port
@@ -87,13 +92,36 @@ typedef struct msp_usci {
 typedef struct msp_timer {
     REG16 CTL;        /**< timer control */
     REG16 CCTL[5];    /**< capture compare channel control */
-    char pad_0[4];   /**< padding */
+    char pad_0[4];    /**< padding */
     REG16 R;          /**< current counter value */
     REG16 CCR[5];     /**< capture compare channel values */
     REG16 EX0;        /**< expansion 0 */
     char pad_1[12];   /**< padding */
     REG16 IV;         /**< interrupt vector */
 } msp_timer_t;
+
+/**
+ * @brief   DMA channel registers
+ */
+typedef struct msp_dma_channel {
+    REG16 CTL;  /**< channel control (00-01) */
+    REG32 SA;   /**< source address (02-05) */
+    REG32 DA;   /**< destination address (06-09) */
+    REG16 SZ;   /**< transfer size (0A-0B) */
+} msp_dma_channel_t;
+
+/**
+ * @brief   DMA module registers
+ */
+typedef struct msp_dma {
+    REG16 CTL0;     /**< module control 0 (00-01) */
+    REG16 CTL1;     /**< module control 1 (02-03) */
+    REG16 CTL2;     /**< module control 2 (04-05) */
+    REG16 CTL3;     /**< module control 3 (05-06) */
+    REG16 CTL4;     /**< module control 4 (07-08) */
+    char pad_0[5];  /**< padding (09-0D) */
+    REG16 IV;       /**< interrupt vector (0E-0F) */
+} msp_dma_t;
 
 /**
  * @brief   USCI control register 0 bitmap
@@ -139,6 +167,27 @@ typedef struct msp_timer {
 #define PORT_A  ((msp_port_t*)PA_BASE)
 #define PORT_B  ((msp_port_t*)PB_BASE)
 #define PORT_J  ((msp_port_t*)PJ_BASE)
+/** @} */
+
+/**
+ * @brief   DMA Control register 0 bitmap
+ * @{
+ */
+#define DMA_CTL0_SEL_REQ    DMA0TSEL__DMAREQ
+/** @} */
+
+/**
+ * @brief   DMA Channel Control register bitmap
+ * @{
+ */
+#define DMA_CC_DT_BLOCK DMADT_1
+#define DMA_CC_DST_INCR   DMADSTINCR_3
+#define DMA_CC_SRC_INCR DMASRCINCR_3
+#define DMA_CC_SRC_CONST   DMASRCINCR_0
+#define DMA_CC_EN    DMAEN
+#define DMA_CC_REQ    DMAREQ
+#define DMA_CC_DST_BYTE    DMADSTBYTE
+#define DMA_CC_SRC_BYTE    DMASRCBYTE
 /** @} */
 
 #ifdef __cplusplus

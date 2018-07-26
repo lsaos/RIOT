@@ -32,7 +32,7 @@ USEMODULE += shell
 USEMODULE += shell_commands
 USEMODULE += ps
 USEMODULE += xtimer
-#USEMODULE += boostir
+USEMODULE += boostir_keypad
 # include and auto-initialize all available sensors
 #USEMODULE += saul_default
 

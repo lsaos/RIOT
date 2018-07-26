@@ -1,6 +1,7 @@
 include $(RIOTCPU)/msp430_common/Makefile.include
 
 export USEMODULE += periph periph_common uart_stdio
+export FEATURES_REQUIRED += periph_dma
 
 ifdef TARGET_ARCH
     ifeq ($(TARGET_ARCH),msp430-elf)

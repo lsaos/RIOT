@@ -39,7 +39,7 @@ __attribute__((constructor)) static void startup(void)
 }
 
 #include <msp430.h>
-#include <string.h>
+#include "periph/dma.h"
 
 void riot_boot(void)
 {
@@ -53,11 +53,11 @@ void riot_boot(void)
     extern char LINKER_bss_start;
     extern char LINKER_bss_size;
 
-    memset((void*)((unsigned int)&LINKER_bss_start),
+    dma_memset((void*)((unsigned int)&LINKER_bss_start),
         0,
         ((unsigned int)&LINKER_bss_size));
 
-    memmove((void*)((unsigned int)&LINKER_data_start),
+    dma_memcpy((void*)((unsigned int)&LINKER_data_start),
         (void*)((unsigned int)&LINKER_data_start_rom),
         ((unsigned int)&LINKER_data_size));
     

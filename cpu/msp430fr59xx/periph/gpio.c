@@ -82,6 +82,18 @@ static int _ctx(gpio_t pin)
     return ((pin >> 8) - 1) * PINS_PER_PORT + i;
 }
 
+/*
+void gpio_save_state(void* state)
+{
+
+}
+
+void gpio_restore_state(void* state)
+{
+    
+}
+*/
+
 int gpio_init(gpio_t pin, gpio_mode_t mode)
 {
     msp_port_t* const port = _port(pin);

@@ -28,6 +28,22 @@
 #include "uart_stdio.h"
 #include "periph/gpio.h"
 
+static void energy_problem(void* arg)
+{
+    (void)arg;
+
+    __disable_interrupt();
+
+    WDTCTL = WDTPW + WDTHOLD;
+
+    LED0_ON();
+    LED1_ON();
+
+    for(;;) {
+        __asm__ __volatile__("nop\n\t"::);
+    }
+}
+
 static void wolverine_ports_init(void)
 {
     P1DIR = 0;
@@ -82,6 +98,8 @@ static void wolverine_ports_init(void)
     /* Disable the GPIO power-on default high-impedance mode to activate
      * previously configured port settings */
     PM5CTL0 &= ~LOCKLPM5;
+
+    gpio_init_int(USER_BTN0_PIN, GPIO_IN, GPIO_FALLING, energy_problem, 0);
 }
 
 void msp430_init_dco(void)

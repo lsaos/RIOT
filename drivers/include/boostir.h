@@ -33,29 +33,6 @@ extern "C" {
 #endif
 
 /**
- * @brief   Keypad keys
- */
-enum {
-    BOOSTIR_KEY_NONE = 0,   /**< no key pressed */
-    BOOSTIR_KEY_OK = 1,     /**< OK key */
-    BOOSTIR_KEY_COPY,       /**< Copy key */
-    BOOSTIR_KEY_TEMP_MINUS, /**< Temp+ key */
-    BOOSTIR_KEY_TEMP_PLUS,  /**< Temp- key */
-    BOOSTIR_KEY_COOL,       /**< Cool key */
-    BOOSTIR_KEY_9,          /**< 9 / Turbo key */
-    BOOSTIR_KEY_6,          /**< 6 / Timer key */
-    BOOSTIR_KEY_3,          /**< 3 / A.Swing key */
-    BOOSTIR_KEY_0,          /**< 0 / Heat key */
-    BOOSTIR_KEY_8,          /**< 8 / Sleep key */
-    BOOSTIR_KEY_5,          /**< 5 / Light key */
-    BOOSTIR_KEY_2,          /**< 2 / M.Swing key */
-    BOOSTIR_KEY_POWER,      /**< Power key */
-    BOOSTIR_KEY_7,          /**< 7 / Clock key */
-    BOOSTIR_KEY_4,          /**< 4 / Fan key */
-    BOOSTIR_KEY_1           /**< 1 / Mode key */
-};
-
-/**
  * @brief   Device initialization parameters
  */
 typedef struct boostir_params {

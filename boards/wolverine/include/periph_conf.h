@@ -43,6 +43,15 @@ extern "C" {
 /** @} */
 
 /**
+ * @name    DMA configuration
+ * @{
+ */
+#define DMA_MODULE  ((msp_dma_t*)DMA_BASE)
+#define DMA_CHAN    3
+#define DMA_CHAN_0   ((msp_dma_channel_t*)(((char*)DMA_BASE) + 0x10))
+/** @} */
+
+/**
  * @name    Timer configuration
  * @{
  */

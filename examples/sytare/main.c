@@ -31,6 +31,7 @@
 #include "shell_commands.h"
 #include "xtimer.h"
 #include "periph/gpio.h"
+#include "boostir_keypad.h"
 
 int echo(int argc, char **argv)
 {
@@ -62,22 +63,22 @@ int led(int argc, char **argv)
     
     if(strcmp(argv[1], "1") == 0) {
         if(strcmp(argv[2], "on") == 0) {
-            LED0_ON;
+            LED0_ON();
         } else if(strcmp(argv[2], "off") == 0) {
-            LED0_OFF;
+            LED0_OFF();
         } else if(strcmp(argv[2], "toggle") == 0) {
-            LED0_TOGGLE;
+            LED0_TOGGLE();
         } else {
             puts("Use: led 1|2 on|off|toggle");
             return -1;
         }
     } else if(strcmp(argv[1], "2") == 0) {
         if(strcmp(argv[2], "on") == 0) {
-            LED1_ON;
+            LED1_ON();
         } else if(strcmp(argv[2], "off") == 0) {
-            LED1_OFF;
+            LED1_OFF();
         } else if(strcmp(argv[2], "toggle") == 0) {
-            LED1_TOGGLE;
+            LED1_TOGGLE();
         } else {
             puts("Use: led 1|2 on|off|toggle");
             return -1;
@@ -119,9 +120,28 @@ static const shell_command_t commands[] = {
     { NULL, NULL, NULL }
 };
 
+boostir_keypad_t keypad;
+
+void callback(uint8_t key, void* arg)
+{
+    (void)arg;
+
+    printf("Pressed %s (%d)\r\n",
+        boostir_keypad_key_name(&keypad, key),
+        (unsigned int)key);
+
+    if(key == BOOSTIR_KEYPAD_0) {
+        LED1_TOGGLE();
+    }
+}
+
 int main(void)
 {
     (void)puts("Sytare test");
+
+    boostir_keypad_params_t keypadParams = BOOSTIR_KEYPAD_PARAMS;
+    keypadParams.cb = callback;
+    boostir_keypad_init(&keypad, &keypadParams);
 
     char lineBuffer[SHELL_DEFAULT_BUFSIZE];
     shell_run(commands, lineBuffer, SHELL_DEFAULT_BUFSIZE);
