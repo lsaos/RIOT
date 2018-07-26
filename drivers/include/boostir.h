@@ -9,11 +9,11 @@
 /**
  * @defgroup    drivers_boostir  TI BOOST IR
  * @ingroup     drivers_netdev
- * @brief       Device drive interface for the TI InfraRed Booster Pack
+ * @brief       Driver for TI's InfraRed BoosterPack
  * @{
  *
  * @file
- * @brief       BOOSTIR definitions
+ * @brief       BOOST-IR definitions
  *
  * @author  Loïc Saos <Loic.Saos@insa-lyon.fr>
  */
@@ -36,25 +36,57 @@ extern "C" {
  * @brief   Device initialization parameters
  */
 typedef struct boostir_params {
-    gpio_t key_in[4];
-    gpio_t key_out[4];
     gpio_t tx_pin;
     gpio_t rx_pin;
 } boostir_params_t;
 
 /**
- * @brief   Device descriptor for the BOOST IR
+ * @brief   Device descriptor for the BOOST-IR
  */
 typedef struct boostir {
     netdev_t netdev;
     boostir_params_t params;
 } boostir_t;
 
+/**
+ * @brief   Setup a BOOST-IR device state
+ *
+ * @param[out] dev          device descriptor
+ * @param[in]  params       parameters for device initialization
+ */
 void boostir_setup(boostir_t* dev, const boostir_params_t* params);
 
+/**
+ * @brief   Trigger a hardware reset and configure BOOST-IR with default values
+ *
+ * @param[in,out] dev       device to reset
+ */
 void boostir_reset(boostir_t* dev);
 
-const char* boostir_key_name(const boostir_t* dev, uint8_t key);
+/**
+ * @name    Set default configuration parameters for the BOOST-IR driver
+ * @{
+ */
+#ifndef BOOSTIR_PARAM_TX_PIN
+#define BOOSTIR_PARAM_TX_PIN    GPIO_PIN(P1, 2)
+#endif
+#ifndef BOOSTIR_PARAM_RX_PIN
+#define BOOSTIR_PARAM_RX_PIN    GPIO_PIN(P3, 0)
+#endif
+
+#ifndef BOOSTIR_PARAMS
+#define BOOSTIR_PARAMS    { .tx_pin = BOOSTIR_PARAM_TX_PIN, \
+                                .rx_pin = BOOSTIR_PARAM_RX_PIN }
+#endif
+/**@}*/
+
+/**
+ * @brief   BOOST-IR driver default configuration
+ */
+static const boostir_params_t boostir_params[] =
+{
+    BOOSTIR_PARAMS
+};
 
 #ifdef __cplusplus
 }

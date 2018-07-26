@@ -20,12 +20,140 @@
 
 #include "net/gnrc.h"
 #include "boostir.h"
-#include "boostir_registers.h"
-#include "boostir_internal.h"
-#include "boostir_netdev.h"
 
 #define ENABLE_DEBUG (0)
 #include "debug.h"
+
+static inline void _send_high(unsigned int count)
+{
+	// 1 unit = 0.562ms = 21.356 carriers at 38kHz
+	// after many tests it works far better when rounding
+	// to 22 instead of 21
+	const unsigned int carrierCount = count * 22;
+
+	for(unsigned int i = 0; i < carrierCount; i++)
+	{
+		// 1 carrier = 26.316µs at 38kHz
+		// 38kHz 1/4 duty-cycle carrier
+		// 6.579µs high = 52.632 cycles high at 8MHz (1 cycle = 0.125µs)
+		// 19.737µs low = 157.896 cycles low at 8MHz (1 cycle = 0.125µs)
+		// round floor to handle bits changes overhead
+
+		P1OUT |= BIT2;
+		__delay_cycles(52);
+
+		P1OUT &= ~BIT2;
+		__delay_cycles(157 - 2); // minus 2 for loop overhead
+	}
+}
+
+static inline void _send_low(unsigned int count)
+{
+	// 1 unit = 562µs = 4496 cycles at 8MHz (1 cycle = 0.125µs)
+	for(unsigned int i = 0; i < count; i++)
+	{
+		__delay_cycles(4496 - 2); // minus 2 for loop overhead
+	}
+}
+
+static int _init(netdev_t* netdev)
+{
+    boostir_t* const dev = (boostir_t*)netdev;
+
+    gpio_init(dev->params.tx_pin, GPIO_OUT);
+    gpio_clear(dev->params.tx_pin);
+
+    return 0;
+}
+
+static int _send(netdev_t *netdev, const iolist_t* iolist)
+{
+    boostir_t* const dev = (boostir_t*)netdev;
+    (void)dev;
+    
+    // do not disturb when sending data
+    __disable_irq();
+
+	_send_high(16); // 9ms high
+	_send_low(8); // 4.5ms low
+
+    while(iolist)
+    {
+        const uint8_t* data = iolist->iol_base;
+        const uint8_t* const end = data + iolist->iol_len;
+
+        while(data < end)
+        {
+            for(uint8_t bit = 0; bit < 8; bit++)
+            {
+                if((*data & (1 << bit)) == 0)
+                {
+                    _send_high(1); // 0.562ms high
+                    _send_low(1); // 0.562ms low
+                }
+                else
+                {
+                    _send_high(1); // 0.562ms high
+                    _send_low(3);  // 1.686ms low
+                }
+            }
+
+            data++;
+        }
+
+        iolist = iolist->iol_next;
+    }
+
+	_send_high(1); // 0.562ms high
+
+    __enable_irq();
+
+    return 0;
+}
+
+static int _recv(netdev_t *netdev, void *buf, size_t len, void *info)
+{
+    (void)netdev;
+    (void)buf;
+    (void)len;
+    (void)info;
+
+    return 0;
+}
+
+static int _get(netdev_t *netdev, netopt_t opt, void *val, size_t max_len)
+{
+    (void)netdev;
+    (void)opt;
+    (void)val;
+    (void)max_len;
+
+    return 0;
+}
+
+static int _set(netdev_t *netdev, netopt_t opt, const void *val, size_t len)
+{
+    (void)netdev;
+    (void)opt;
+    (void)val;
+    (void)len;
+
+    return 0;
+}
+
+static void _isr(netdev_t *netdev)
+{
+    (void)netdev;
+}
+
+static const netdev_driver_t boostir_driver = {
+    .send = _send,
+    .recv = _recv,
+    .init = _init,
+    .isr = _isr,
+    .get = _get,
+    .set = _set,
+};
 
 void boostir_setup(boostir_t* dev, const boostir_params_t* params)
 {
@@ -34,8 +162,6 @@ void boostir_setup(boostir_t* dev, const boostir_params_t* params)
     netdev->driver = &boostir_driver;
     /* initialize device descriptor */
     memcpy(&dev->params, params, sizeof(boostir_params_t));
-
-    boostir_keypad_init(dev);
 }
 
 void boostir_reset(boostir_t* dev)
@@ -43,30 +169,4 @@ void boostir_reset(boostir_t* dev)
     (void)dev;
     
     DEBUG("boostir_reset(): reset complete.\n");
-}
-
-const char* boostir_key_name(const boostir_t* dev, uint8_t key)
-{
-    (void)dev;
-
-    switch(key)
-    {
-        case BOOSTIR_KEY_OK: return "OK";
-        case BOOSTIR_KEY_COPY: return "Copy";
-        case BOOSTIR_KEY_TEMP_MINUS: return "Temp-";
-        case BOOSTIR_KEY_TEMP_PLUS: return "Temp+";
-        case BOOSTIR_KEY_COOL: return "Cool";
-        case BOOSTIR_KEY_9: return "9";
-        case BOOSTIR_KEY_6: return "6";
-        case BOOSTIR_KEY_3: return "3";
-        case BOOSTIR_KEY_0: return "0";
-        case BOOSTIR_KEY_8: return "8";
-        case BOOSTIR_KEY_5: return "5";
-        case BOOSTIR_KEY_2: return "2";
-        case BOOSTIR_KEY_POWER: return "Power";
-        case BOOSTIR_KEY_7: return "7";
-        case BOOSTIR_KEY_4: return "4";
-        case BOOSTIR_KEY_1: return "1";
-        default: return "Unknown";
-    }
 }

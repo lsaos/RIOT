@@ -393,3 +393,8 @@ ifneq (,$(filter tja1042,$(USEMODULE)))
   USEMODULE += can_trx
   FEATURES_REQUIRED += periph_gpio
 endif
+
+ifneq (,$(filter boostir,$(USEMODULE)))
+  FEATURES_REQUIRED += periph_gpio periph_timer
+  USEMODULE += xtimer
+endif

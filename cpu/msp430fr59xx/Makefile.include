@@ -15,7 +15,7 @@ ifdef TARGET_ARCH
 
         export LINKFLAGS += -L$(RIOTCPU)/$(CPU)/elf-gcc/ldscripts \
             -fno-builtin -nostartfiles -nodefaultlibs -nostdlib \
-            -T$(CPU_MODEL).ld
+            -T$(CPU_MODEL).ld -lmul_f5
         
     endif
 endif

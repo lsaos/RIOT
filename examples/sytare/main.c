@@ -30,10 +30,82 @@
 #include "shell.h"
 #include "shell_commands.h"
 #include "xtimer.h"
-#include "periph/gpio.h"
+#include "boostir.h"
 #include "boostir_keypad.h"
 
-int echo(int argc, char **argv)
+#define _STACKSIZE      256
+#define MSG_TYPE_ISR    0x3456
+#define MSG_TYPE_KEY    0x3457
+
+static char stack[_STACKSIZE];
+static kernel_pid_t _recv_pid;
+
+static boostir_keypad_t keypad;
+static boostir_t boostir;
+
+static void _key_pressed(uint8_t key, void* arg)
+{
+    (void)arg;
+
+    msg_t msg;
+    msg.type = MSG_TYPE_KEY;
+    msg.content.value = key;
+    msg_send(&msg, _recv_pid);
+}
+
+static void _event_cb(netdev_t* dev, netdev_event_t event)
+{
+    if (event == NETDEV_EVENT_ISR)
+    {
+        msg_t msg;
+        msg.type = MSG_TYPE_ISR;
+        msg.content.ptr = dev;
+        msg_send(&msg, _recv_pid);
+    }
+    else
+    {
+    }
+}
+
+void* _recv_thread(void* arg)
+{
+    (void)arg;
+
+    while (1)
+    {
+        msg_t msg;
+        msg_receive(&msg);
+
+        if (msg.type == MSG_TYPE_ISR)
+        {
+            netdev_t* const dev = msg.content.ptr;
+            dev->driver->isr(dev);
+        }
+        else if(msg.type == MSG_TYPE_KEY)
+        {
+            const uint8_t key = (uint8_t)msg.content.value;
+
+            printf("Sending key '%s' down\r\n", boostir_keypad_key_name(&keypad, key));
+
+            uint8_t data[] = { 0x55, ~0x55, key, ~key };
+
+            const iolist_t list = {
+                .iol_next = NULL,
+                .iol_base = data,
+                .iol_len = 4
+            };
+
+            netdev_t* const dev = (netdev_t*)&boostir;
+            dev->driver->send(dev, &list);
+        }
+        else
+        {
+            puts("Unexpected message type");
+        }
+    }
+}
+
+static int _echo(int argc, char **argv)
 {
     int i;
     const char* s;
@@ -54,7 +126,7 @@ int echo(int argc, char **argv)
     return 0;
 }
 
-int led(int argc, char **argv)
+static int _led(int argc, char **argv)
 {
     if(argc != 3) {
         puts("Use: led 1|2 on|off|toggle");
@@ -91,7 +163,7 @@ int led(int argc, char **argv)
     return 0;
 }
 
-int countdown(int argc, char **argv)
+static int _countdown(int argc, char **argv)
 {
     if(argc != 2) {
         puts("Use: countdown seconds");
@@ -113,38 +185,49 @@ int countdown(int argc, char **argv)
     return 0;
 }
 
-static const shell_command_t commands[] = {
-    { "echo", "Simple echo", echo },
-    { "led", "LED control", led },
-    { "countdown", "Countdown in seconds", countdown },
+static const shell_command_t _commands[] = {
+    { "echo", "Simple echo", _echo },
+    { "led", "LED control", _led },
+    { "countdown", "Countdown in seconds", _countdown },
     { NULL, NULL, NULL }
 };
 
-boostir_keypad_t keypad;
-
-void callback(uint8_t key, void* arg)
+static int _init(void)
 {
-    (void)arg;
+    boostir_keypad_params_t keypadParams = BOOSTIR_KEYPAD_PARAMS;
+    keypadParams.cb = _key_pressed;
+    boostir_keypad_init(&keypad, &keypadParams);
 
-    printf("Pressed %s (%d)\r\n",
-        boostir_keypad_key_name(&keypad, key),
-        (unsigned int)key);
+    boostir_setup(&boostir, boostir_params);
 
-    if(key == BOOSTIR_KEYPAD_0) {
-        LED1_TOGGLE();
+    netdev_t* const dev = (netdev_t*)(&boostir);
+    dev->event_callback = _event_cb;
+    dev->driver->init(dev);
+
+    _recv_pid = thread_create(stack, sizeof(stack), THREAD_PRIORITY_MAIN - 1,
+                              THREAD_CREATE_STACKTEST, _recv_thread, NULL,
+                              "recv_thread");
+
+    if (_recv_pid <= KERNEL_PID_UNDEF) {
+        puts("Creation of receiver thread failed");
+        return 1;
     }
+
+    return 0;
 }
 
 int main(void)
 {
-    (void)puts("Sytare test");
+    puts("Sytare example");
 
-    boostir_keypad_params_t keypadParams = BOOSTIR_KEYPAD_PARAMS;
-    keypadParams.cb = callback;
-    boostir_keypad_init(&keypad, &keypadParams);
+    if(_init()) {
+        return 1;
+    }
+
+    puts("Initialization successful - starting the shell now");
 
     char lineBuffer[SHELL_DEFAULT_BUFSIZE];
-    shell_run(commands, lineBuffer, SHELL_DEFAULT_BUFSIZE);
+    shell_run(_commands, lineBuffer, SHELL_DEFAULT_BUFSIZE);
 
     return 0;
 }

@@ -63,7 +63,7 @@ void* dma_memset(void* dst, unsigned char val, size_t len)
     DMA_CHAN_0->DA = (size_t)dst;
     DMA_CHAN_0->SZ = len;
 
-    DMA_CHAN_0->CTL = DMA_CC_DT_BLOCK    /* Block transfer mode     */
+    DMA_CHAN_0->CTL = DMA_CC_DT_BLOCK   /* Block transfer mode     */
             | DMA_CC_DST_INCR           /* Increment dst address   */
             | DMA_CC_SRC_CONST          /* Constant src address    */
             | DMA_CC_EN                 /* Enable DMA              */

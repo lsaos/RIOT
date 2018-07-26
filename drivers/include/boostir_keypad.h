@@ -9,7 +9,7 @@
 /**
  * @defgroup    drivers_boostir_keypad BOOST-IR keypad driver
  * @ingroup     drivers_actuators
- * @brief       Driver for TI's Infrared BoosterPack keypad
+ * @brief       Driver for TI's InfraRed BoosterPack keypad
  *
  * @{
  *
