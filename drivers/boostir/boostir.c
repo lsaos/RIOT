@@ -18,6 +18,8 @@
  * @}
  */
 
+#include "periph/dma.h"
+#include "periph/timer.h"
 #include "net/gnrc.h"
 #include "boostir.h"
 
@@ -56,16 +58,6 @@ static inline void _send_low(unsigned int count)
 	}
 }
 
-static int _init(netdev_t* netdev)
-{
-    boostir_t* const dev = (boostir_t*)netdev;
-
-    gpio_init(dev->params.tx_pin, GPIO_OUT);
-    gpio_clear(dev->params.tx_pin);
-
-    return 0;
-}
-
 static int _send(netdev_t *netdev, const iolist_t* iolist)
 {
     boostir_t* const dev = (boostir_t*)netdev;
@@ -98,25 +90,200 @@ static int _send(netdev_t *netdev, const iolist_t* iolist)
                 }
             }
 
+            const uint8_t checkData = ~(*data);
+
+            for(uint8_t bit = 0; bit < 8; bit++)
+            {
+                if((checkData & (1 << bit)) == 0)
+                {
+                    _send_high(1); // 0.562ms high
+                    _send_low(1); // 0.562ms low
+                }
+                else
+                {
+                    _send_high(1); // 0.562ms high
+                    _send_low(3);  // 1.686ms low
+                }
+            }
+
             data++;
         }
 
         iolist = iolist->iol_next;
     }
 
-	_send_high(1); // 0.562ms high
+	_send_high(2); // 1.124ms high
 
     __enable_irq();
 
     return 0;
 }
 
+static void _rx_isr(void* arg)
+{
+    boostir_t* const dev = (boostir_t*)arg;
+
+    const unsigned int oldCount = dev->rx_time;
+    const unsigned int newCount = timer_read(0);
+    dev->rx_time = newCount;
+
+    const unsigned int timeCount = newCount - oldCount; // Time interval
+
+    switch(dev->rx_state)
+    {
+        case 0: // Header of IR code
+            dev->rx_state = 1;
+            break;
+        case 1: // 9ms leading pulse burst
+            if(timeCount > 8000 && timeCount < 10000) {
+                dev->rx_state = 2;
+            } else {
+                dev->rx_state = 0;
+                gpio_reset_edge(dev->params.rx_pin);
+            }
+            break;
+        case 2: // 4.5ms space
+            if(timeCount > 3500 && timeCount < 5500) {
+                dev->rx_state = 3;
+                
+                dma_memset(dev->rx_data, 0, BOOSTIR_RX_BUFFER_LEN); // Clear the data
+
+                dev->rx_edge_count = 0; // Clear the counter
+                dev->rx_data_len = 0;
+                dev->rx_bit_count = 0;
+                dev->rx_check_data = 0;
+            } else {
+                dev->rx_state = 0;
+                gpio_reset_edge(dev->params.rx_pin);
+            }
+            break;
+        case 3: // Data of IR code
+            if(timeCount > 8000 && timeCount < 10000)
+            {
+                dev->rx_state = 2; // Enter idle state and wait for new code
+                gpio_reset_edge(dev->params.rx_pin);
+            }
+            else
+            {
+                dev->rx_edge_count++; // Both rising edge and falling edge are captured
+
+                if(dev->rx_edge_count % 2 == 0)
+                {
+                    if(dev->rx_data_len >= BOOSTIR_RX_BUFFER_LEN)
+                    {
+                        dev->rx_state = 4;
+                        if(dev->netdev.event_callback) {
+                            dev->netdev.event_callback(&dev->netdev, NETDEV_EVENT_ISR);
+                        }
+                    }
+                    else if(dev->rx_bit_count > 7)
+                    {
+                        if(timeCount > 1125) { // Space is 1.68ms
+                            dev->rx_check_data |= 0x80; // Logical '1'
+                        } else {						// Space is 0.56ms
+                            dev->rx_check_data &= 0x7f; // Logical '0'
+                        }
+
+                        if(dev->rx_bit_count == 15) {
+                            const unsigned char expected = ~dev->rx_data[dev->rx_data_len];
+
+                            if(dev->rx_check_data == expected) {
+                                dev->rx_data_len++;
+                                dev->rx_check_data = 0;
+                                dev->rx_bit_count = 0; // Start a new byte
+                            } else {
+                                dev->rx_state = 0;
+                                gpio_reset_edge(dev->params.rx_pin);
+                            }
+                        } else {
+                            // Shifting based on Byte
+                            dev->rx_check_data >>= 1;
+                            dev->rx_bit_count++;
+                        }
+                    }
+                    else
+                    {
+                        if(timeCount > 1125) { // Space is 1.68ms
+                            dev->rx_data[dev->rx_data_len] |= 0x80; // Logical '1'
+                        } else {						// Space is 0.56ms
+                            dev->rx_data[dev->rx_data_len] &= 0x7f; // Logical '0'
+                        }
+
+                        if(dev->rx_bit_count != 7) {
+                            // Shifting based on Byte
+                            dev->rx_data[dev->rx_data_len] >>= 1;
+                        }
+
+                        dev->rx_bit_count++;
+                    }
+                }
+                else if(timeCount > 1125)
+                {
+                    if(dev->rx_data_len && !dev->rx_bit_count)
+                    {
+                        dev->rx_state = 4;
+                        if(dev->netdev.event_callback) {
+                            dev->netdev.event_callback(&dev->netdev, NETDEV_EVENT_ISR);
+                        }
+                    }
+                    else
+                    {
+                        dev->rx_state = 0;
+                        gpio_reset_edge(dev->params.rx_pin);
+                    }
+                }
+            }
+            break;
+        case 4: // The end of IR code
+            break;
+        default:
+            assert(0);
+            break;
+    }
+}
+
 static int _recv(netdev_t *netdev, void *buf, size_t len, void *info)
 {
-    (void)netdev;
-    (void)buf;
-    (void)len;
-    (void)info;
+    boostir_t* const dev = (boostir_t*)netdev;
+
+    if(dev->rx_state != 4) {
+        if(info) {
+            ((boostir_rx_info_t*)info)->data_len = 0;
+        }
+        return -1;
+    }
+
+    if(len > dev->rx_data_len) {
+        len = dev->rx_data_len;
+    }
+
+    dma_memcpy(buf, dev->rx_data, len);
+
+    if(info) {
+        ((boostir_rx_info_t*)info)->data_len = len;
+    }
+
+    dev->rx_state = 0;
+    gpio_reset_edge(dev->params.rx_pin);
+
+    return 0;
+}
+
+static int _init(netdev_t* netdev)
+{
+    boostir_t* const dev = (boostir_t*)netdev;
+
+    gpio_init(dev->params.tx_pin, GPIO_OUT);
+    gpio_clear(dev->params.tx_pin);
+
+    dev->rx_time = 0;
+    dev->rx_state = 0;
+    dev->rx_edge_count = 0;
+    dev->rx_bit_count = 0;
+    dev->rx_data_len = 0;
+    dev->rx_check_data = 0;
+
+    gpio_init_int(dev->params.rx_pin, GPIO_IN, GPIO_BOTH, _rx_isr, dev);
 
     return 0;
 }
@@ -143,7 +310,7 @@ static int _set(netdev_t *netdev, netopt_t opt, const void *val, size_t len)
 
 static void _isr(netdev_t *netdev)
 {
-    (void)netdev;
+    netdev->event_callback(netdev, NETDEV_EVENT_RX_COMPLETE);
 }
 
 static const netdev_driver_t boostir_driver = {
@@ -157,7 +324,7 @@ static const netdev_driver_t boostir_driver = {
 
 void boostir_setup(boostir_t* dev, const boostir_params_t* params)
 {
-    netdev_t* netdev = (netdev_t*)dev;
+    netdev_t* const netdev = (netdev_t*)dev;
 
     netdev->driver = &boostir_driver;
     /* initialize device descriptor */

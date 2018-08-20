@@ -62,8 +62,20 @@ static void _event_cb(netdev_t* dev, netdev_event_t event)
         msg.content.ptr = dev;
         msg_send(&msg, _recv_pid);
     }
-    else
+    else if(event == NETDEV_EVENT_RX_COMPLETE)
     {
+        char buf[BOOSTIR_RX_BUFFER_LEN + 1];
+        boostir_rx_info_t info;
+
+        dev->driver->recv(dev, buf, sizeof(buf), &info);
+
+        if(info.data_len == 1 && (buf[0] & (1 << 7))) {
+            const uint8_t key = buf[0] & ~(1 << 7);
+            printf("Key '%s' down\r\n", boostir_keypad_key_name(&keypad, key));
+        } else {
+            buf[info.data_len + 1] = '\0';
+            puts(buf);
+        }
     }
 }
 
@@ -83,16 +95,16 @@ void* _recv_thread(void* arg)
         }
         else if(msg.type == MSG_TYPE_KEY)
         {
-            const uint8_t key = (uint8_t)msg.content.value;
+            uint8_t key = (uint8_t)msg.content.value;
 
             printf("Sending key '%s' down\r\n", boostir_keypad_key_name(&keypad, key));
 
-            uint8_t data[] = { 0x55, ~0x55, key, ~key };
+            key |= 1 << 7;
 
             const iolist_t list = {
                 .iol_next = NULL,
-                .iol_base = data,
-                .iol_len = 4
+                .iol_base = &key,
+                .iol_len = 1
             };
 
             netdev_t* const dev = (netdev_t*)&boostir;
@@ -103,6 +115,35 @@ void* _recv_thread(void* arg)
             puts("Unexpected message type");
         }
     }
+}
+
+static int _send(int argc, char **argv)
+{
+    if(argc != 2) {
+        puts("Use: send \"data\"");
+        return -1;
+    }
+    
+    char* const str = argv[1];
+    const size_t len = strlen(str);
+
+    if(len > BOOSTIR_RX_BUFFER_LEN) {
+        puts("Data to send is too long");
+        return -1;
+    }
+
+    printf("Sending '%s'\r\n", str);
+
+    const iolist_t list = {
+        .iol_next = NULL,
+        .iol_base = str,
+        .iol_len = len
+    };
+
+    netdev_t* const dev = (netdev_t*)&boostir;
+    dev->driver->send(dev, &list);
+
+    return 0;
 }
 
 static int _echo(int argc, char **argv)
@@ -189,6 +230,7 @@ static const shell_command_t _commands[] = {
     { "echo", "Simple echo", _echo },
     { "led", "LED control", _led },
     { "countdown", "Countdown in seconds", _countdown },
+    { "send", "Send IR data", _send },
     { NULL, NULL, NULL }
 };
 

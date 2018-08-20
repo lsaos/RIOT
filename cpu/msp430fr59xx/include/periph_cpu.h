@@ -79,6 +79,13 @@ enum {
  */
 void gpio_periph_mode(gpio_t pin, bool sel0, bool sel1, bool selComp);
 
+/**
+ * @brief   Reset the edge for pins with GPIO_BOTH
+ *
+ * @param[in] pin     pin to reset
+ */
+void gpio_reset_edge(gpio_t pin);
+
 #ifdef __cplusplus
 }
 #endif

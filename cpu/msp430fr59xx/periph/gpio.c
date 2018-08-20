@@ -140,13 +140,18 @@ int gpio_init_int(gpio_t pin, gpio_mode_t mode, gpio_flank_t flank,
     gpio_isr_ctx_t* const ctx = &isr_ctx[_ctx(pin)];
     ctx->cb = cb;
     ctx->arg = arg;
-    ctx->both_edges = (flank & GPIO_BOTH) != 0;
+    ctx->both_edges = (flank == GPIO_BOTH);
 
     /* configure flank */
-    port->REN[portindex] |= _pin(pin);
-    port->OD[portindex] |= _pin(pin);
+    if(ctx->both_edges) {
+        port->REN[portindex] &= ~_pin(pin);
+        port->OD[portindex] &= ~_pin(pin);
+    } else {
+        port->REN[portindex] |= _pin(pin);
+        port->OD[portindex] |= _pin(pin);
+    }
 
-    if(flank == 0) {
+    if(flank != GPIO_RISING) {
         port->IES[portindex] |= _pin(pin);
     }
     else {
@@ -154,7 +159,7 @@ int gpio_init_int(gpio_t pin, gpio_mode_t mode, gpio_flank_t flank,
     }
 
     /* clear pending interrupts and enable the IRQ */
-    port->IFG[portindex] &= ~(_pin(pin));
+    port->IFG[portindex] &= ~_pin(pin);
     gpio_irq_enable(pin);
 
     return 0;
@@ -244,6 +249,11 @@ void gpio_write(gpio_t pin, int value)
     }
 }
 
+void gpio_reset_edge(gpio_t pin)
+{
+    _port(pin)->IES[_port_index(pin)] |= _pin(pin);
+}
+
 static inline void isr_handler(msp_port_t* port, uint8_t portindex, int ctx)
 {
     for (unsigned i = 0; i < PINS_PER_PORT; i++)
@@ -252,11 +262,11 @@ static inline void isr_handler(msp_port_t* port, uint8_t portindex, int ctx)
         {
             const gpio_isr_ctx_t* const ictx = &isr_ctx[i + ctx];
 
-            ictx->cb(ictx->arg);
-
             if(ictx->both_edges) {
                 port->IES[portindex] ^= (1 << i);
             }
+
+            ictx->cb(ictx->arg);
 
             port->IFG[portindex] &= ~(1 << i);
         }

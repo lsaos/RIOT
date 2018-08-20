@@ -33,6 +33,13 @@ extern "C" {
 #endif
 
 /**
+ * @brief   Reception buffer length for the BOOST-IR
+ */
+#ifndef BOOSTIR_RX_BUFFER_LEN
+#define BOOSTIR_RX_BUFFER_LEN 20
+#endif
+
+/**
  * @brief   Device initialization parameters
  */
 typedef struct boostir_params {
@@ -46,7 +53,21 @@ typedef struct boostir_params {
 typedef struct boostir {
     netdev_t netdev;
     boostir_params_t params;
+    unsigned int rx_time;
+    unsigned char rx_state;
+    uint8_t rx_data[BOOSTIR_RX_BUFFER_LEN];
+    unsigned int rx_edge_count;
+    unsigned int rx_bit_count;
+    unsigned int rx_data_len;
+    uint8_t rx_check_data;
 } boostir_t;
+
+/**
+ * @brief   Received packet informations
+ */
+typedef struct boostir_rx_info {
+    size_t data_len;
+} boostir_rx_info_t;
 
 /**
  * @brief   Setup a BOOST-IR device state
