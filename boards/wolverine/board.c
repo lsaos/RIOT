@@ -25,6 +25,8 @@
 
 #include "cpu.h"
 #include "board.h"
+
+/*
 #include "uart_stdio.h"
 #include "periph/gpio.h"
 
@@ -95,15 +97,38 @@ static void wolverine_ports_init(void)
     gpio_init(LED0_PIN, GPIO_OUT);
     gpio_init(LED1_PIN, GPIO_OUT);
 
-    /* Disable the GPIO power-on default high-impedance mode to activate
-     * previously configured port settings */
+    * Disable the GPIO power-on default high-impedance mode to activate
+     * previously configured port settings 
     PM5CTL0 &= ~LOCKLPM5;
 
     gpio_init_int(USER_BTN0_PIN, GPIO_IN, GPIO_FALLING, energy_problem, 0);
 }
 
-void msp430_init_dco(void)
+* "public" specific initialization function for the Wolverine hardware 
+
+void board_init(void)
 {
+    * init CPU core 
+    msp430_cpu_init();
+
+    * init MCU pins as adequate for wolverine hardware 
+    wolverine_ports_init();
+
+    * initializes DCO 
+    msp430_init_dco();
+
+    * initialize STDIO over UART 
+    uart_stdio_init();
+
+    * enable interrupts 
+    __enable_interrupt();
+}*/
+
+void board_init_dco(void)
+{
+    /* disable watchdog timer */
+    WDTCTL = WDTPW + WDTHOLD;
+
     // Clock System Setup
     CSCTL0_H = CSKEY >> 8;  // Unlock CS registers
 
@@ -119,24 +144,4 @@ void msp430_init_dco(void)
     } while (SFRIFG1&OFIFG); // Test oscillator fault flag
 
     CSCTL0_H = 0; // Lock CS registers
-}
-
-/* "public" specific initialization function for the Wolverine hardware */
-
-void board_init(void)
-{
-    /* init CPU core */
-    msp430_cpu_init();
-
-    /* init MCU pins as adequate for wolverine hardware */
-    wolverine_ports_init();
-
-    /* initializes DCO */
-    msp430_init_dco();
-
-    /* initialize STDIO over UART */
-    uart_stdio_init();
-
-    /* enable interrupts */
-    __enable_interrupt();
 }

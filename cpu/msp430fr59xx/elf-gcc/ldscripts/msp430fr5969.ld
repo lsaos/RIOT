@@ -215,6 +215,37 @@ SECTIONS
     PROVIDE(_eheap = __heap_end__);
   } > NVRAM
 
+  /** Checkpoints (NVRAM) *****************************************************/
+
+  .checkpoint0 : ALIGN(2)
+  {
+    /* Allocate data section in checkpoint */
+    . = ALIGN(2);
+    PROVIDE(LINKER_checkpoint_data_start = .);
+    . += SIZEOF(.data);
+
+    . = ALIGN(2);
+    PROVIDE(LINKER_checkpoint_bss_start = .);
+    . += SIZEOF(.bss);
+
+    . = ALIGN(2);
+    PROVIDE(LINKER_checkpoint_heap_start = .);
+    . += SIZEOF(.heap);
+
+    . = ALIGN(2);
+    *(.checkpoint)
+  } >NVRAM
+
+  /* Duplicate checkpoint */
+  .checkpoint1 : ALIGN(2)
+  {
+    . += SIZEOF(.checkpoint0);
+  } >NVRAM
+
+  LINKER_checkpoint0_start = ADDR(.checkpoint0);
+  LINKER_checkpoint1_start = ADDR(.checkpoint1);
+  LINKER_checkpoint_size   = SIZEOF(.checkpoint0);
+
   /** Misc  *******************************************************************/
 
   /* the Stack Pointer will be initialized to this value in boot.S */
