@@ -82,18 +82,6 @@ static int _ctx(gpio_t pin)
     return ((pin >> 8) - 1) * PINS_PER_PORT + i;
 }
 
-/*
-void gpio_save_state(void* state)
-{
-
-}
-
-void gpio_restore_state(void* state)
-{
-    
-}
-*/
-
 int gpio_init(gpio_t pin, gpio_mode_t mode)
 {
     msp_port_t* const port = _port(pin);
@@ -300,3 +288,112 @@ ISR(PORT4_VECTOR, isr_port4)
     isr_handler(PORT_B, 1, 8 * 3);
     __exit_isr();
 }
+
+#ifdef MODULE_SYTARE
+
+#include "periph_syt.h"
+
+void gpio_save_state(gpio_syt_state_t* state)
+{
+    state->OD[0] = P1OUT;
+    state->OD[1] = P2OUT;
+    state->OD[2] = P3OUT;
+    state->OD[3] = P4OUT;
+    state->OD[4] = PJOUT;
+
+    state->DIR[0] = P1DIR;
+    state->DIR[1] = P2DIR;
+    state->DIR[2] = P3DIR;
+    state->DIR[3] = P4DIR;
+    state->DIR[4] = PJDIR;
+
+    state->REN[0] = P1REN;
+    state->REN[1] = P2REN;
+    state->REN[2] = P3REN;
+    state->REN[3] = P4REN;
+    state->REN[4] = PJREN;
+
+    state->SEL0[0] = P1SEL0;
+    state->SEL0[1] = P2SEL0;
+    state->SEL0[2] = P3SEL0;
+    state->SEL0[3] = P4SEL0;
+    state->SEL0[4] = PJSEL0;
+
+    state->SEL1[0] = P1SEL1;
+    state->SEL1[1] = P2SEL1;
+    state->SEL1[2] = P3SEL1;
+    state->SEL1[3] = P4SEL1;
+    state->SEL1[4] = PJSEL1;
+
+    state->SELC[0] = P1SELC;
+    state->SELC[1] = P2SELC;
+    state->SELC[2] = P3SELC;
+    state->SELC[3] = P4SELC;
+    state->SELC[4] = PJSELC;
+
+    state->IES[0] = P1IES;
+    state->IES[1] = P2IES;
+    state->IES[2] = P3IES;
+    state->IES[3] = P4IES;
+
+    state->IE[0] = P1IE;
+    state->IE[1] = P2IE;
+    state->IE[2] = P3IE;
+    state->IE[3] = P4IE;
+}
+
+void gpio_restore_state(const gpio_syt_state_t* state)
+{
+    P1OUT = state->OD[0];
+    P2OUT = state->OD[1];
+    P3OUT = state->OD[2];
+    P4OUT = state->OD[3];
+    PJOUT = state->OD[4];
+
+    P1REN = state->REN[0];
+    P2REN = state->REN[1];
+    P3REN = state->REN[2];
+    P4REN = state->REN[3];
+    PJREN = state->REN[4];
+
+    P1DIR = state->DIR[0];
+    P2DIR = state->DIR[1];
+    P3DIR = state->DIR[2];
+    P4DIR = state->DIR[3];
+    PJDIR = state->DIR[4];
+
+    P1IES = state->IES[0];
+    P2IES = state->IES[1];
+    P3IES = state->IES[2];
+    P4IES = state->IES[3];
+
+    P1IE = state->IE[0];
+    P2IE = state->IE[1];
+    P3IE = state->IE[2];
+    P4IE = state->IE[3];
+
+    P1IFG = 0;
+    P2IFG = 0;
+    P3IFG = 0;
+    P4IFG = 0;
+
+    P1SEL0 = state->SEL0[0];
+    P2SEL0 = state->SEL0[1];
+    P3SEL0 = state->SEL0[2];
+    P4SEL0 = state->SEL0[3];
+    PJSEL0 = state->SEL0[4];
+
+    P1SEL1 = state->SEL1[0];
+    P2SEL1 = state->SEL1[1];
+    P3SEL1 = state->SEL1[2];
+    P4SEL1 = state->SEL1[3];
+    PJSEL1 = state->SEL1[4];
+
+    P1SELC = state->SELC[0];
+    P2SELC = state->SELC[1];
+    P3SELC = state->SELC[2];
+    P4SELC = state->SELC[3];
+    PJSELC = state->SELC[4];
+}
+
+#endif /* MODULE_SYTARE */

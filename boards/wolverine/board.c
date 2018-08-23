@@ -25,26 +25,23 @@
 
 #include "cpu.h"
 #include "board.h"
-
-/*
 #include "uart_stdio.h"
 #include "periph/gpio.h"
+
+#ifdef MODULE_SYTARE
+
+#include "sytare.h"
 
 static void energy_problem(void* arg)
 {
     (void)arg;
 
-    __disable_interrupt();
-
     WDTCTL = WDTPW + WDTHOLD;
 
-    LED0_ON();
-    LED1_ON();
-
-    for(;;) {
-        __asm__ __volatile__("nop\n\t"::);
-    }
+    syt_save_and_shutdown();
 }
+
+#endif /* MODULE_SYTARE */
 
 static void wolverine_ports_init(void)
 {
@@ -97,37 +94,32 @@ static void wolverine_ports_init(void)
     gpio_init(LED0_PIN, GPIO_OUT);
     gpio_init(LED1_PIN, GPIO_OUT);
 
-    * Disable the GPIO power-on default high-impedance mode to activate
-     * previously configured port settings 
-    PM5CTL0 &= ~LOCKLPM5;
-
+#ifdef MODULE_SYTARE
     gpio_init_int(USER_BTN0_PIN, GPIO_IN, GPIO_FALLING, energy_problem, 0);
+#endif /* MODULE_SYTARE */
 }
-
-* "public" specific initialization function for the Wolverine hardware 
 
 void board_init(void)
 {
-    * init CPU core 
     msp430_cpu_init();
 
-    * init MCU pins as adequate for wolverine hardware 
     wolverine_ports_init();
 
-    * initializes DCO 
-    msp430_init_dco();
-
-    * initialize STDIO over UART 
     uart_stdio_init();
 
-    * enable interrupts 
     __enable_interrupt();
-}*/
+}
 
 void board_init_dco(void)
 {
-    /* disable watchdog timer */
-    WDTCTL = WDTPW + WDTHOLD;
+    WDTCTL = WDTPW | WDTHOLD; // Stop WDT
+
+    // Configure GPIO
+    PJSEL0 = BIT4 | BIT5; // For XT1
+
+    // Disable the GPIO power-on default high-impedance mode to activate
+    // previously configured port settings
+    PM5CTL0 &= ~LOCKLPM5;
 
     // Clock System Setup
     CSCTL0_H = CSKEY >> 8;  // Unlock CS registers

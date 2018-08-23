@@ -1,12 +1,96 @@
+/*
+ * Copyright (C) 2018 INRIA
+ *
+ * This file is subject to the terms and conditions of the GNU Lesser
+ * General Public License v2.1. See the file LICENSE in the top level
+ * directory for more details.
+ */
 
-/******************************************************************/
-/****************************************************** INCLUDES **/
+/**
+ * @ingroup     sys
+ * @ingroup     sys_sytare
+ * @{
+ *
+ * @file
+ * @brief       Sytare implementation
+ *
+ * @author      Loïc Saos <Loic.Saos@insa-lyon.fr>
+ * @}
+ */
 
 #include "board.h"
+#include "kernel_init.h"
+#include "periph_syt.h"
 #include "periph/dma.h"
 
-/******************************************************************/
-/*********************************************** EXTERNAL THINGS **/
+__attribute__((section(".periphs_state")))
+volatile char periphs_state[0
+#ifdef MODULE_PERIPH_DMA
+    + sizeof(dma_syt_state_t)
+#endif /* MODULE_PERIPH_DMA */
+#ifdef MODULE_PERIPH_GPIO
+    + sizeof(gpio_syt_state_t)
+#endif /* MODULE_PERIPH_GPIO */
+#ifdef MODULE_PERIPH_UART
+    + sizeof(uart_syt_state_t)
+#endif /* MODULE_PERIPH_UART */
+#ifdef MODULE_PERIPH_TIMER
+    + sizeof(timer_syt_state_t)
+#endif /* MODULE_PERIPH_TIMER */
+];
+
+/**
+ * @brief   Save all active periphs state
+ * 
+ * @param[out] state    buffer to save the state
+ */
+static void save_periphs_state(char* state)
+{
+#ifdef MODULE_PERIPH_DMA
+    dma_save_state((dma_syt_state_t*)state);
+    state += sizeof(dma_syt_state_t);
+#endif /* MODULE_PERIPH_DMA */
+#ifdef MODULE_PERIPH_GPIO
+    gpio_save_state((gpio_syt_state_t*)state);
+    state += sizeof(gpio_syt_state_t);
+#endif /* MODULE_PERIPH_GPIO */
+#ifdef MODULE_PERIPH_UART
+    uart_save_state((uart_syt_state_t*)state);
+    state += sizeof(uart_syt_state_t);
+#endif /* MODULE_PERIPH_UART */
+#ifdef MODULE_PERIPH_TIMER
+    timer_save_state((timer_syt_state_t*)state);
+    state += sizeof(timer_syt_state_t);
+#endif /* MODULE_PERIPH_TIMER */
+}
+
+/**
+ * @brief   Restore all active periphs state
+ * 
+ * @param[in] state    buffer storing the state
+ */
+static void restore_periphs_state(const char* state)
+{
+#ifdef MODULE_PERIPH_DMA
+    dma_restore_state((const dma_syt_state_t*)state);
+    state += sizeof(dma_syt_state_t);
+#endif /* MODULE_PERIPH_DMA */
+#ifdef MODULE_PERIPH_GPIO
+    gpio_restore_state((const gpio_syt_state_t*)state);
+    state += sizeof(gpio_syt_state_t);
+#endif /* MODULE_PERIPH_GPIO */
+#ifdef MODULE_PERIPH_UART
+    uart_restore_state((const uart_syt_state_t*)state);
+    state += sizeof(uart_syt_state_t);
+#endif /* MODULE_PERIPH_UART */
+#ifdef MODULE_PERIPH_TIMER
+    timer_restore_state((const timer_syt_state_t*)state);
+    state += sizeof(timer_syt_state_t);
+#endif /* MODULE_PERIPH_TIMER */
+}
+
+extern void board_init_dco(void);
+extern void board_init(void);
 
 extern char LINKER_data_start;
 extern char LINKER_data_size;
@@ -17,165 +101,139 @@ extern char LINKER_bss_size;
 
 extern char LINKER_checkpoint_data_start;
 extern char LINKER_checkpoint_bss_start;
-extern char LINKER_checkpoint_heap_start;
+extern char LINKER_checkpoint_periphs_start;
 
 extern char LINKER_checkpoint0_start;
 extern char LINKER_checkpoint1_start;
-extern char LINKER_checkpoint_size;
 
-extern void board_init_dco(void);
+#define LINKER_DATA         ((void*)((unsigned int)&LINKER_data_start))
+#define LINKER_DATA_ROM     ((void*)((unsigned int)&LINKER_data_start_rom))
+#define LINKER_DATA_SIZE    ((unsigned int)&LINKER_data_size)
 
+#define LINKER_BSS          ((void*)((unsigned int)&LINKER_bss_start))
+#define LINKER_BSS_SIZE     ((unsigned int)&LINKER_bss_size)
 
-/******************************************************************/
-/*********************************************** TYPES & STRUCTS **/
+/**
+ * @brief   Get the memory address of the specified checkpoint index
+ */
+#define GET_CHECKPOINT_ADDR(checkpoint) ((char*)(((checkpoint) == 0) ? ((unsigned int)&LINKER_checkpoint0_start) : ((unsigned int)&LINKER_checkpoint1_start)))
 
-typedef struct
+/**
+ * @brief   Get the memory offset in checkpoint of the specified variable name
+ */
+#define GET_CHECKPOINT_VAR_OFFSET(name) (((unsigned int)&LINKER_checkpoint_##name) - ((unsigned int)&LINKER_checkpoint0_start))
+
+/**
+ * @brief   Get a pointer to the specified variable in the specified checkpoint index
+ */
+#define GET_CHECKPOINT_VAR(checkpoint, name) (GET_CHECKPOINT_ADDR(checkpoint) + GET_CHECKPOINT_VAR_OFFSET(name))
+
+/**
+ * @brief   True if sytare reboot is enabled
+ */
+static __attribute__((section(".persistent_bss")))
+volatile bool syt_reboot;
+
+/**
+ * @brief   Last valid checkpoint index (0 or 1)
+ */
+static __attribute__((section(".persistent_bss")))
+volatile uint8_t syt_checkpoint;
+
+/**
+ * @brief   Endless loop to shutdown the platform
+ */
+static void shutdown_platform(void)
 {
-    size_t sp;          ///< stack pointer
-    size_t base_addr;   ///< base address of checkpoint section in memory
-} syt_checkpoint_t;
-
-
-/******************************************************************/
-/******************************************************** MACROS **/
-
-/// Find the offset of a variable that has been allocated in the .checkpoint
-/// section (argument is the address of the variable). The linker will always
-/// allocate the variable in the first checkpoint, and since every symbol in C
-/// can only have one address, we can only access that variable in another
-/// checkpoint by it's offset (which is the same in every checkpoint).
-#define GET_OFFSET_IN_CHECKPOINT(addr) ( (size_t) addr - ((size_t) &LINKER_checkpoint0_start) )
-
-/// Reference a variable in the .checkpoint section (read as well as write).
-///
-/// See GET_OFFSET_IN_CHECKPOINT for more information on why this is needed.
-#define GET_CHECKPOINT_VAR(name, type, checkpoint_base_addr) \
-    ((type*)( (size_t) checkpoint_base_addr + GET_OFFSET_IN_CHECKPOINT(&name) ))
-
-
-/******************************************************************/
-/***************************************************** VARIABLES **/
-
-
-
-// Checkpointing status variables --------------------------------//
-// /!\ these must never be changed outside the primary OS routines.
-static int syt_first_boot = 1;
-
-// metadata about checkpoints that has to be stored in each checkpoint, it has
-// to be allocated in the .checkpoint section
-static __attribute__((section(".checkpoint")))
-syt_checkpoint_t syt_checkpoint;
-
-// assign at boot to checkpoint{0,1}
-static syt_checkpoint_t* syt_last = 0;
-static syt_checkpoint_t* syt_next = 0;
-
-// statistics
-static uint16_t stats_boot_count = 0;
-static uint16_t stats_success_count = 0;
-
-
-/******************************************************************/
-/**************************************** FUNCTIONS DECLARATIONS **/
-
-static inline bool syt_is_first_boot(void);
-
-
-/******************************************************************/
-/********************************************* SYSTEM PRIMITIVES **/
-
-// function used to forgot previously saved state
-static void syt_reset_to_first_boot(void)
-{
-    syt_first_boot = 1;
-    syt_next = 0;
-    syt_last = 0;
-    stats_boot_count = 0;
-    stats_success_count = 0;
+    for(;;) {
+        __asm__ __volatile__("nop\n\t"::);
+    }
 }
 
-
-/******************************************************************/
-/*************************************************** SYSTEM BOOT **/
-
-bool syt_is_first_boot(void)
+void syt_reset_reboot(void)
 {
-    return (syt_first_boot == 1);
+    // Disable sytare reboot
+    syt_reboot = false;
+
+    // Reset the current checkpoint to zero
+    syt_checkpoint = 0;
+}
+
+void syt_save_and_shutdown(void)
+{
+    // Disable interrupts
+    __disable_irq();
+
+    // Compute new checkpoint index
+    const uint8_t checkpoint = (syt_checkpoint == 0 ? 1 : 0);
+
+    // Save periphs hardware state
+    save_periphs_state(GET_CHECKPOINT_VAR(checkpoint, periphs_start));
+
+    // Save bss to checkpoint
+    dma_memcpy(GET_CHECKPOINT_VAR(checkpoint, bss_start), LINKER_BSS, LINKER_BSS_SIZE);
+
+    // Save data to checkpoint
+    dma_memcpy(GET_CHECKPOINT_VAR(checkpoint, data_start), LINKER_DATA, LINKER_DATA_SIZE);
+
+    // Set current checkpoint index
+    syt_checkpoint = checkpoint;
+
+    // Enable sytare reboot
+    syt_reboot = true;
+
+    // Notify user with all LEDs on
+    LED0_ON();
+    LED1_ON();
+
+    // Wait for an hardware reboot
+    shutdown_platform();
 }
 
 void riot_boot(void)
 {
-    // platform level init -------------------------------------------//
+    // Always reset watchdog and init DCO first
     board_init_dco();
 
-    // check of broken state
-    if(!syt_first_boot && syt_last == 0) {
-        syt_reset_to_first_boot();
+    // Check wether first boot or reboot
+    if(syt_reboot)
+    {
+        const uint8_t checkpoint = syt_checkpoint;
+
+        // Restore data from checkpoint
+        dma_memcpy(LINKER_DATA, GET_CHECKPOINT_VAR(checkpoint, data_start), LINKER_DATA_SIZE);
+
+        // Restore bss from checkpoint
+        dma_memcpy(LINKER_BSS, GET_CHECKPOINT_VAR(checkpoint, bss_start), LINKER_BSS_SIZE);
+
+        // Restore periphs hardware state from checkpoint
+        restore_periphs_state(GET_CHECKPOINT_VAR(checkpoint, periphs_start));
+
+        // Enable interrupts
+        __enable_irq();
+
+        // Restore all registers, including SP and PC
+        __exit_isr();
+    }
+    else
+    {
+        // It is the first boot, we do a complete startup
+
+        // Fill bss with zeroes
+        dma_memset(LINKER_BSS, 0, LINKER_BSS_SIZE);
+
+        // Fill data from ROM
+        dma_memcpy(LINKER_DATA, LINKER_DATA_ROM, LINKER_DATA_SIZE);
+
+        // Initialize the board
+        board_init();
+
+        // Initialize RIOT kernel
+        // It will run the main too
+        kernel_init();
     }
 
-    // OS init -------------------------------------------------------//
-    syt_checkpoint_t* syt_checkpoint0 = GET_CHECKPOINT_VAR(syt_checkpoint, syt_checkpoint_t, ((size_t) &LINKER_checkpoint0_start));
-    syt_checkpoint_t* syt_checkpoint1 = GET_CHECKPOINT_VAR(syt_checkpoint, syt_checkpoint_t, ((size_t) &LINKER_checkpoint1_start));
-
-    if(syt_is_first_boot()) {
-        // Preparing OS bss section in NVRAM at first boot
-        dma_memset((void*)((unsigned int)&LINKER_bss_start), 0, ((unsigned int)&LINKER_bss_size));
-
-        // Clear the checkpointing metadata structure and the actual checkpoints
-        dma_memset(syt_checkpoint0, 0, sizeof(syt_checkpoint_t));
-        dma_memset(syt_checkpoint1, 0, sizeof(syt_checkpoint_t));
-        dma_memset((void*)((size_t) &LINKER_checkpoint0_start), 0, ((size_t) &LINKER_checkpoint_size));
-        dma_memset((void*)((size_t) &LINKER_checkpoint1_start), 0, ((size_t) &LINKER_checkpoint_size));
-
-        // initialize base addresses
-        syt_checkpoint0->base_addr = ((size_t) &LINKER_checkpoint0_start);
-        syt_checkpoint1->base_addr = ((size_t) &LINKER_checkpoint1_start);
-    }
-
-    // Initialize the checkpoint pointers
-    if(syt_is_first_boot()) {
-        // first run: just initialize the next pointer
-        syt_next = syt_checkpoint0;
-    } else {
-        // normal run: initialize next pointer to the other memory zone than the
-        //             one pointed by last
-        syt_next = (syt_last == syt_checkpoint0) ?
-                        syt_checkpoint1 :
-                        syt_checkpoint0;
-    }
-
-    // statistics
-    stats_boot_count++;
-
+    // If we return from the main, execution is over
+    syt_reset_reboot();
+    shutdown_platform();
 }
-
-/*
-__attribute__((constructor)) static void startup(void)
-{
-    * use putchar so the linker links it in: 
-    putchar('\n');
-
-    board_init();
-
-    LOG_INFO("RIOT MSP430 hardware initialization complete.\n");
-
-    kernel_init();
-}
-
-#include <msp430.h>
-#include "periph/dma.h"
-
-void riot_boot(void)
-{
-    dma_memset((void*)((unsigned int)&LINKER_bss_start),
-        0,
-        ((unsigned int)&LINKER_bss_size));
-
-    dma_memcpy((void*)((unsigned int)&LINKER_data_start),
-        (void*)((unsigned int)&LINKER_data_start_rom),
-        ((unsigned int)&LINKER_data_size));
-    
-    startup();
-}
-*/

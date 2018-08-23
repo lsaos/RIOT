@@ -20,9 +20,16 @@
  */
 
 #include "cpu.h"
+#ifdef MODULE_SYTARE
+#include "sytare.h"
+#endif /* MODULE_SYTARE */
 
 void pm_reboot(void)
 {
+#ifdef MODULE_SYTARE
+    syt_reset_reboot();
+#endif /* MODULE_SYTARE */
+
     /* force an hardware reboot ("Power-Up Clear"), by writing
        an illegal value to the watchdog control register */
     while (1) {

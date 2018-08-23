@@ -89,7 +89,6 @@ static int init_base(uart_t uart, uint32_t baudrate)
     gpio_periph_mode(UART_RX_PIN, false, true, false);
     gpio_periph_mode(UART_TX_PIN, false, true, false);
 
-
     dev->CTLW0 = USCI_CTL0_SWRST;
     
     dev->CTLW0 |= USCI_CTL0_SSEL_SMCLK;
@@ -141,5 +140,35 @@ ISR(UART_RX_ISR, isr_uart_0_rx)
 
     __exit_isr();
 }
+
+#ifdef MODULE_SYTARE
+
+#include "periph_syt.h"
+
+void uart_save_state(uart_syt_state_t* state)
+{
+    state->BR0 = UCA0BR0;
+    state->BR1 = UCA0BR1;
+    state->MCTLW = UCA0MCTLW;
+}
+
+void uart_restore_state(const uart_syt_state_t* state)
+{
+    UCA0CTLW0 = USCI_CTL0_SWRST;
+
+    UCA0CTLW0 |= USCI_CTL0_SSEL_SMCLK;
+    UCA0BR0 = state->BR0;
+    UCA0BR1 = state->BR1;
+    UCA0MCTLW |= state->MCTLW;
+
+    UCA0CTLW0 &= ~USCI_CTL0_SWRST;
+
+    UART_IF &= ~UART_IE_RX_BIT;
+    UART_IF |=  UART_IE_TX_BIT;
+    UART_IE |=  UART_IE_RX_BIT;
+    UART_IE &= ~UART_IE_TX_BIT;
+}
+
+#endif /* MODULE_SYTARE */
 
 #endif // UART_USE_USCI

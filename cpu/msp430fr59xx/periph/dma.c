@@ -25,28 +25,6 @@
 #include "periph_conf.h"
 #include "periph/dma.h"
 
-/*
-void dma_save_state(char* state)
-{
-    *(REG16)state = DMA0CTL; state += sizeof(REG16);
-    *(REG16)state = DMACTL0; state += sizeof(REG16);
-    *(REG32)state = DMA0SA; state += sizeof(REG32);
-    *(REG32)state = DMA0DA; state += sizeof(REG32);
-    *(REG16)state = DMA0SZ; state += sizeof(REG16);
-}
-
-void dma_restore_state(const char* state)
-{
-    DMA0CTL = 0x0;
-
-    DMACTL0 = *(REG16)state; state += sizeof(REG16);
-    DMA0SA = *(REG32)state; state += sizeof(REG32);
-    DMA0DA = *(REG32)state; state += sizeof(REG32);
-    DMA0SZ = *(REG16)state; state += sizeof(REG16);
-    DMA0CTL = *(REG16)state; state += sizeof(REG16);
-}
-*/
-
 void* dma_memset(void* dst, unsigned char val, size_t len)
 {
     if(len == 0) {
@@ -54,7 +32,7 @@ void* dma_memset(void* dst, unsigned char val, size_t len)
     }
 
     /* reset control register */
-    DMA_CHAN_0->CTL = 0x0;
+    DMA_CHAN_0->CTL = 0;
 
     /* use DMAREQ as trigger*/
     DMA_MODULE->CTL0 |= DMA_CTL0_SEL_REQ;
@@ -110,7 +88,7 @@ void* dma_memcpy(void* dst, const void* src, size_t len)
     }
 
     /* reset control register */
-    DMA_CHAN_0->CTL = 0x0;
+    DMA_CHAN_0->CTL = 0;
 
     /* use DMAREQ as trigger*/
     DMA_MODULE->CTL0 |= DMA_CTL0_SEL_REQ;
@@ -134,3 +112,26 @@ void* dma_memcpy(void* dst, const void* src, size_t len)
 
     return initial_dst;
 }
+
+#ifdef MODULE_SYTARE
+
+#include "periph_syt.h"
+
+void dma_save_state(dma_syt_state_t* state)
+{
+    state->SA = DMA_CHAN_0->SA;
+    state->DA = DMA_CHAN_0->DA;
+    state->SZ = DMA_CHAN_0->SZ;
+}
+
+void dma_restore_state(const dma_syt_state_t* state)
+{
+    DMA_CHAN_0->CTL = 0;
+    DMA_MODULE->CTL0 |= DMA_CTL0_SEL_REQ;
+    
+    DMA_CHAN_0->SA = state->SA;
+    DMA_CHAN_0->DA = state->DA;
+    DMA_CHAN_0->SZ = state->SZ;
+}
+
+#endif /* MODULE_SYTARE */

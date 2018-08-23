@@ -42,7 +42,6 @@ static timer_cb_t isr_cb;
  */
 static void *isr_arg;
 
-
 int timer_init(tim_t timer, unsigned long freq, timer_cb_t cb, void* arg)
 {
     /* using fixed TIMER_BASE for now */
@@ -148,3 +147,39 @@ ISR(TIMER_ISR_CCX, isr_timer_a_ccx)
 
     __exit_isr();
 }
+
+#ifdef MODULE_SYTARE
+
+#include "periph_syt.h"
+
+void timer_save_state(timer_syt_state_t* state)
+{
+    state->R = TA0R;
+    state->CTL = TA0CTL;
+
+    state->CCR[0] = TA0CCR0;
+    state->CCR[1] = TA0CCR1;
+    state->CCR[2] = TA0CCR2;
+
+    state->CCTL[0] = TA0CCTL0;
+    state->CCTL[1] = TA0CCTL1;
+    state->CCTL[2] = TA0CCTL2;
+}
+
+void timer_restore_state(const timer_syt_state_t* state)
+{
+    TA0CTL = 0;
+
+    TA0CCR0 = state->CCR[0];
+    TA0CCR1 = state->CCR[1];
+    TA0CCR2 = state->CCR[2];
+    
+    TA0CCTL0 = state->CCTL[0];
+    TA0CCTL1 = state->CCTL[1];
+    TA0CCTL2 = state->CCTL[2];
+
+    TA0R = state->R;
+    TA0CTL = state->CTL;
+}
+
+#endif /* MODULE_SYTARE */

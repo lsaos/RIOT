@@ -12,5 +12,5 @@
 ;;;------------------------------------------------------------
 .align(2)
 __riot_boot_start:
-	mov #LINKER_boot_sp, R1  ; constant provided by ldscript 
+	mov #LINKER_isr_sp, R1  ; constant provided by ldscript 
 	br #riot_boot

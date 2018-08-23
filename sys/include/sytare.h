@@ -25,6 +25,16 @@
 extern "C" {
 #endif
 
+/**
+ * @brief   Save all the system and shutdown
+ */
+void syt_save_and_shutdown(void);
+
+/**
+ * @brief   Reset the reboot system to do a complete startup next time
+ */
+void syt_reset_reboot(void);
+
 #ifdef __cplusplus
 }
 #endif

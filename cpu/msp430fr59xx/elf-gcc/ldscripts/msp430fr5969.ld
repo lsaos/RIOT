@@ -157,7 +157,6 @@ SECTIONS
 
   .text : ALIGN(2)
   {
-    PROVIDE(_start = .);
     *(.text .text.*)
   } >NVRAM
 
@@ -178,6 +177,13 @@ SECTIONS
   {
     PROVIDE(_bss_start = .);
     *(.bss .bss.*)
+
+    . = ALIGN(2);
+    PROVIDE(_sheap = .);
+    _end = .;
+    . += 64;
+    PROVIDE(_eheap = .);
+
     PROVIDE(_bss_end = .);
   } >RAM
 
@@ -189,37 +195,14 @@ SECTIONS
   .isr_stack : ALIGN(2)
   {
     PROVIDE(_isr_stack_start = .);
-    *(.isr_stack .isr_stack.*)
+    . += 256;
     PROVIDE(_isr_stack_end = .);
-  } >RAM /* For unknown reason, the size of isr_stack is counted in data section */
-
-  /** Heap (NVRAM) ************************************************************/
-
-  .heap (NOLOAD) :
-  {
-    . = ALIGN(2);
-    __heap_start__ = .;
-    _end = __heap_start__;
-    PROVIDE(_sheap = __heap_start__);
-    PROVIDE (end = .);
-    KEEP (*(.heap))
-    _end = .;
-    PROVIDE (end = .);
-    /* This word is here so that the section is not empty, and thus
-        not discarded by the linker.  The actual value does not matter
-        and is ignored.  */
-    LONG(0);
-    . += 64;
-    __heap_end__ = .;
-    __HeapLimit = __heap_end__;
-    PROVIDE(_eheap = __heap_end__);
-  } > NVRAM
+  } >RAM
 
   /** Checkpoints (NVRAM) *****************************************************/
 
   .checkpoint0 : ALIGN(2)
   {
-    /* Allocate data section in checkpoint */
     . = ALIGN(2);
     PROVIDE(LINKER_checkpoint_data_start = .);
     . += SIZEOF(.data);
@@ -229,11 +212,9 @@ SECTIONS
     . += SIZEOF(.bss);
 
     . = ALIGN(2);
-    PROVIDE(LINKER_checkpoint_heap_start = .);
-    . += SIZEOF(.heap);
-
-    . = ALIGN(2);
-    *(.checkpoint)
+    PROVIDE(LINKER_checkpoint_periphs_start = .);
+    *(.periphs_state)
+    . += 68;
   } >NVRAM
 
   /* Duplicate checkpoint */
@@ -244,12 +225,16 @@ SECTIONS
 
   LINKER_checkpoint0_start = ADDR(.checkpoint0);
   LINKER_checkpoint1_start = ADDR(.checkpoint1);
-  LINKER_checkpoint_size   = SIZEOF(.checkpoint0);
+
+  /* Sytare persistent data stored once */
+  .persistent_bss : ALIGN(2)
+  {
+    *(.persistent_bss)
+  } >NVRAM
 
   /** Misc  *******************************************************************/
 
-  /* the Stack Pointer will be initialized to this value in boot.S */
-  LINKER_boot_sp = _isr_stack_end - 2;
+  LINKER_isr_sp = _isr_stack_end - 2;
 
   /* Needed for annotated disassembly listing. Reference:
    * https://e2e.ti.com/support/development_tools/compiler/f/343/t/531113
