@@ -59,9 +59,9 @@ typedef uint16_t gpio_t;
  */
 #define HAVE_GPIO_FLANK_T
 typedef enum {
-    GPIO_FALLING = 0xff,        /**< emit interrupt on falling flank */
-    GPIO_RISING  = 0x00,        /**< emit interrupt on rising flank */
-    GPIO_BOTH    = 0xab         /**< not supported -> random value*/
+    GPIO_FALLING,        /**< emit interrupt on falling flank */
+    GPIO_RISING,         /**< emit interrupt on rising flank */
+    GPIO_BOTH            /**< not supported -> random value*/
 } gpio_flank_t;
 /** @} */
 

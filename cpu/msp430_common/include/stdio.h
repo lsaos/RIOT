@@ -17,15 +17,20 @@
  * @author      Joakim Nohlgård <joakim.nohlgard@eistec.se
  */
 
-#ifndef STDIO_H
-#define STDIO_H
+#ifndef MSP430_STDIO_H
+#define MSP430_STDIO_H
+
+#include_next <stdio.h>
+
+/*
+ * Newlib already provides getchar in stdio.h.
+ */
+#ifndef MODULE_NEWLIB_SYSCALLS_DEFAULT
 
 /*
  * The MSP430 toolchain does not provide getchar in stdio.h.
  * As a workaround, we include the system stdio.h here and then add getchar.
  */
-
-#include_next <stdio.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -41,5 +46,7 @@ int getchar(void);
 }
 #endif
 
-#endif /* STDIO_H */
+#endif /* MODULE_NEWLIB_SYSCALLS_DEFAULT */
+
+#endif /* MSP430_STDIO_H */
 /** @} */

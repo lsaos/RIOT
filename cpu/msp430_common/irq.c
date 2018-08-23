@@ -24,8 +24,6 @@
 
 volatile int __irq_is_in = 0;
 
-char __isr_stack[ISR_STACKSIZE];
-
 unsigned int irq_disable(void)
 {
     unsigned int state;

@@ -43,12 +43,20 @@ extern "C" {
 #define EOVERFLOW   (65)
 #endif
 
+#ifdef MODULE_LIBC
+
+typedef unsigned time_t;
+
+#else /* MODULE_LIBC */
+
 /**
  * @brief   Definition of `time_t` for the MSP430
  *
  * @todo    Remove once msp430 libc supports `time_t`
  */
 typedef unsigned long time_t;
+
+#endif /* MODULE_LIBC */
 
 /**
  * @brief   Definition of `struct timespec` for the MSP430

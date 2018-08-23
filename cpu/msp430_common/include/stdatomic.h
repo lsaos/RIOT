@@ -29,8 +29,8 @@
 
 /* This file was imported into RIOT from newlib 2.3.0 */
 
-#ifndef STDATOMIC_H
-#define STDATOMIC_H
+#ifndef MSP430_STDATOMIC_H
+#define MSP430_STDATOMIC_H
 
 #include <sys/cdefs.h>
 #include <sys/_types.h>
@@ -423,4 +423,4 @@ atomic_flag_clear(volatile atomic_flag *__object)
 }
 #endif
 
-#endif /* STDATOMIC_H */
+#endif /* MSP430_STDATOMIC_H */

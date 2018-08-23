@@ -17,8 +17,8 @@
  * @author      Joakim Nohlgård <joakim.nohlgard@eistec.se
  */
 
-#ifndef STDLIB_H
-#define STDLIB_H
+#ifndef MSP430_STDLIB_H
+#define MSP430_STDLIB_H
 
 /*
  * The MSP430 toolchain does not provide malloc, free, calloc etc. in stdlib.h.
@@ -37,5 +37,5 @@ extern "C" {
 }
 #endif
 
-#endif /* STDLIB_H */
+#endif /* MSP430_STDLIB_H */
 /** @} */
