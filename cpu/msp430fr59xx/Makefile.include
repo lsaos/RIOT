@@ -1,13 +1,13 @@
 include $(RIOTCPU)/msp430_common/Makefile.include
 
-export USEMODULE += periph periph_common uart_stdio libc fmt sytare
+export USEMODULE += periph periph_common uart_stdio libc fmt
 export FEATURES_REQUIRED += periph_dma
 
 INCLUDES += -I$(RIOTBASE)/sys/libc/include/gcc
 INCLUDES += -I$(RIOTBASE)/sys/libc/include
 
 export CFLAGS += -I$(RIOTCPU)/$(CPU)/elf-gcc/include \
-    -fno-common -ffreestanding -nostdinc
+    -fno-common -ffreestanding -nostdinc -D__MSP430_NO_LIBC_CRT0__
 
 export LINKFLAGS += -L$(RIOTCPU)/$(CPU)/elf-gcc/ldscripts \
     -fno-builtin -nostartfiles -nodefaultlibs -nostdlib \

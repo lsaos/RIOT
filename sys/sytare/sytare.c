@@ -23,6 +23,9 @@
 #include "periph_syt.h"
 #include "periph/dma.h"
 
+/**
+ * @brief   Variable used to know the size of periphs state in the linker script
+ */
 __attribute__((section(".periphs_state")))
 volatile char periphs_state[0
 #ifdef MODULE_PERIPH_DMA

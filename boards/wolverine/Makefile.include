@@ -15,3 +15,5 @@ include $(RIOTMAKE)/tools/serial.inc.mk
 export OFLAGS = -O ihex
 export FLASHER = mspdebug
 export FFLAGS = tilib "prog $(HEXFILE)"
+
+export USEMODULE += sytare

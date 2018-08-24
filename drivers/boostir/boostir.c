@@ -22,6 +22,7 @@
 #include "periph/timer.h"
 #include "net/gnrc.h"
 #include "boostir.h"
+#include "irq.h"
 
 #define ENABLE_DEBUG (0)
 #include "debug.h"
@@ -64,7 +65,7 @@ static int _send(netdev_t *netdev, const iolist_t* iolist)
     (void)dev;
     
     // do not disturb when sending data
-    __disable_irq();
+    const unsigned int irqState = irq_disable();
 
 	_send_high(16); // 9ms high
 	_send_low(8); // 4.5ms low
@@ -114,7 +115,7 @@ static int _send(netdev_t *netdev, const iolist_t* iolist)
 
 	_send_high(2); // 1.124ms high
 
-    __enable_irq();
+    irq_restore(irqState);
 
     return 0;
 }
