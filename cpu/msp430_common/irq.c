@@ -24,6 +24,10 @@
 
 volatile int __irq_is_in = 0;
 
+#ifndef __MSP430_NO_LIBC_CRT0__
+char __isr_stack[ISR_STACKSIZE];
+#endif /* __MSP430_NO_LIBC_CRT0__ */
+
 unsigned int irq_disable(void)
 {
     unsigned int state;

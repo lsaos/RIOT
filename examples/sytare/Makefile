@@ -1,8 +1,8 @@
 # name of your application
-APPLICATION = default
+APPLICATION = sytare
 
 # If no BOARD is found in the environment, use this default:
-BOARD ?= native
+BOARD ?= wolverine
 
 # This has to be the absolute path to the RIOT base directory:
 RIOTBASE ?= $(CURDIR)/../..

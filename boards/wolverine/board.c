@@ -95,7 +95,12 @@ static void wolverine_ports_init(void)
     gpio_init(LED1_PIN, GPIO_OUT);
 
 #ifdef MODULE_SYTARE
+
+    // At this time energy problem is simulated by a simple press
+    // on the user button, but in production we will use a comparator
+    // event
     gpio_init_int(USER_BTN0_PIN, GPIO_IN, GPIO_FALLING, energy_problem, 0);
+
 #endif /* MODULE_SYTARE */
 }
 

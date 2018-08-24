@@ -213,8 +213,7 @@ SECTIONS
 
     . = ALIGN(2);
     PROVIDE(LINKER_checkpoint_periphs_start = .);
-    *(.periphs_state)
-    . += 68;
+    KEEP(*(.periphs_state))
   } >NVRAM
 
   /* Duplicate checkpoint */

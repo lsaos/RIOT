@@ -1,7 +1,5 @@
 /*
- * Copyright (C) 2008, 2009, 2010 Kaspar Schleiser <kaspar@schleiser.de>
- * Copyright (C) 2013 INRIA
- * Copyright (C) 2013 Ludwig Knüpfer <ludwig.knuepfer@fu-berlin.de>
+ * Copyright (C) 2018 INRIA
  *
  * This file is subject to the terms and conditions of the GNU Lesser
  * General Public License v2.1. See the file LICENSE in the top level
@@ -13,12 +11,9 @@
  * @{
  *
  * @file
- * @brief       Default application that shows a lot of functionality of RIOT
+ * @brief       Application that shows the power of Sytare
  *
- * @author      Kaspar Schleiser <kaspar@schleiser.de>
- * @author      Oliver Hahm <oliver.hahm@inria.fr>
- * @author      Ludwig Knüpfer <ludwig.knuepfer@fu-berlin.de>
- *
+ * @author      Loïc Saos <Loic.Saos@insa-lyon.fr>
  * @}
  */
 
@@ -73,7 +68,7 @@ static void _event_cb(netdev_t* dev, netdev_event_t event)
             const uint8_t key = buf[0] & ~(1 << 7);
             printf("Key '%s' down\r\n", boostir_keypad_key_name(&keypad, key));
         } else {
-            buf[info.data_len + 1] = '\0';
+            buf[info.data_len] = '\0';
             puts(buf);
         }
     }
